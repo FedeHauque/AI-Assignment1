@@ -2,7 +2,7 @@
  A*, path planner solution
 
 
-GROUP 14.
+GROUP 14 - HAUQUE, IVANOV, TAN
 '''
 
 from tkinter import *
@@ -10,6 +10,7 @@ import struct
 import xml.etree.ElementTree as ET
 from queue import *
 import math
+import numpy as np
 from numpy import long
 
 # bounds of the window, in lat/long
@@ -298,21 +299,17 @@ def build_graph(elevs):
     for item in root:
         if item.tag == 'node':
             coords = ((float)(item.get('lat')), (float)(item.get('lon')))
-            ## row is 0 for 43N, 1201 (EPIX) for 42N
-            #erow = (int)((43 - coords[0]) * EPIX)
-            ## col is 0 for 18 E, 1201 for 19 E
-            #ecol = (int)((coords[1] - 18) * EPIX)
-            #try:
-            #    el = elevs[erow * EPIX + ecol]
-            #except IndexError:
-            #    el = 0
-            nodes[(long)(item.get('id'))] = Node((long)(item.get('id')), coords, 0)
+            # row is 0 for 44N
+            erow = (int)((44 - coords[0]) * EPIX)
+            # col is 0 for 79 W
+            ecol = (int)((coords[1] + 79) * EPIX)
+            try:
+                el = elevs[erow][ecol]
+            except IndexError:
+                el = 0
+            nodes[(long)(item.get('id'))] = Node((long)(item.get('id')), coords, el)
+            print('node id: ', (long)(item.get('id')),'elevation: ', el)
         elif item.tag == 'way':
-            if item.get('id') == '157161112':  # main coastline way ID
-                for thing in item:
-                    if thing.tag == 'nd':
-                        coastnodes.append((long)(thing.get('ref')))
-                continue
             useme = False
             oneway = False
             myname = 'unnamed way'
@@ -346,7 +343,24 @@ def build_graph(elevs):
                 ways[wayid].nodes = nlist
     return nodes, ways, coastnodes
 
-nodes, ways, coastnodes = build_graph(0)
+def build_elevs():
+    height = EPIX
+    width = EPIX
+    fi = open(r"n43_w079_1arc_v2.bil", "rb")
+    contents = fi.read()
+    fi.close()
+    s = "<%dH" % (int(width * height),)
+    z = struct.unpack(s, contents)
+    heights = np.zeros((height, width))
+    for r in range(0, height):
+        for c in range(0, width):
+            elevation = z[((width) * r) + c]
+            heights[r][c] = float(elevation)
+    print(len(heights))
+    return heights
+
+elevs = build_elevs()
+nodes, ways, coastnodes = build_graph(elevs)
 print(len(nodes),' nodes: ', nodes)
 print(len(ways), 'ways: ', ways)
 
