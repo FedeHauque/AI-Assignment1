@@ -35,14 +35,16 @@ MPERLAT = 111000
 MPERLON = MPERLAT * LONRATIO
 
 def node_dist(n1, n2):
-    ''' Distance between nodes n1 and n2, in meters. '''
+    ''' Distance between nodes n1 and n2, considering the elevation difference (in meters) '''
     dx = (n2.pos[0] - n1.pos[0]) * MPERLON
     dy = (n2.pos[1] - n1.pos[1]) * MPERLAT
-    return math.sqrt(dx * dx + dy * dy)  # in meters
+    plain_distance = math.sqrt(dx * dx + dy * dy)
+    elev_diff = n1.elev - n2.elev
+    return math.sqrt(elev_diff * elev_diff + plain_distance * plain_distance)  # in meters
 
 class Node():
     ''' Graph (map) node, not a search node! '''
-    __slots__ = ('id', 'pos', 'ways', 'elev', 'waystr')
+    __slots__ = ('id', 'pos', 'ways', 'elev', 'waystr', 'wayset')
 
     def __init__(self, id, p, e=0):
         self.id = id
@@ -63,7 +65,7 @@ class Node():
             for w in self.ways:
                 self.wayset.add(w.way.name)
             for w in self.wayset:
-                self.waystr += w.encode("utf-8") + " "
+                self.waystr += w + " "
         return self.waystr
 
 
@@ -100,8 +102,7 @@ class Planner():
 
     def heur(self, node, gnode):
         '''
-        Heuristic function is just straight-line (flat) distance.
-        Since the actual cost only adds to this distance, this is admissible.
+        We changed the heuristic function taking into account the elevation of each node.
         '''
         return node_dist(node, gnode)
 
@@ -160,10 +161,10 @@ class PlanWin(Frame):
 
     def lat_lon_to_elev(self, latlon):
         # row is 0 for 43N, 1201 (EPIX) for 42N
-        row = (int)((43 - latlon[0]) * EPIX)
+        row = (int)((44 - latlon[0]) * EPIX)
         # col is 0 for 18 E, 1201 for 19 E
-        col = (int)((latlon[1] - 18) * EPIX)
-        return self.elevs[row * EPIX + col]
+        col = (int)((latlon[1] + 79) * EPIX)
+        return self.elevs[row][col]
 
     def maphover(self, event):
         self.elab.configure(text=str(self.pix_to_elev(event.x, event.y)))
@@ -174,7 +175,7 @@ class PlanWin(Frame):
                 lnpos = self.lat_lon_to_pix(self.nodes[self.lastnode].pos)
                 self.canvas.coords('lastdot', (lnpos[0] - 2, lnpos[1] - 2, lnpos[0] + 2, lnpos[1] + 2))
                 nstr = str(self.lastnode)
-                nstr += " "
+                nstr += " - "
                 nstr += str(self.nodes[self.whatis[ckpos]].get_waystr())
                 self.nodelab.configure(text=nstr)
                 return
@@ -308,7 +309,6 @@ def build_graph(elevs):
             except IndexError:
                 el = 0
             nodes[(long)(item.get('id'))] = Node((long)(item.get('id')), coords, el)
-            print('node id: ', (long)(item.get('id')),'elevation: ', el)
         elif item.tag == 'way':
             useme = False
             oneway = False
@@ -361,10 +361,10 @@ def build_elevs():
 
 elevs = build_elevs()
 nodes, ways, coastnodes = build_graph(elevs)
-print(len(nodes),' nodes: ', nodes)
-print(len(ways), 'ways: ', ways)
+print(len(nodes),' nodes: ')
+print(len(ways), 'ways: ')
 
 master = Tk()
-thewin = PlanWin(master, nodes, ways, coastnodes, 0)
+thewin = PlanWin(master, nodes, ways, coastnodes, elevs)
 mainloop()
 
