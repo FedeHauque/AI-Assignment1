@@ -119,7 +119,7 @@ class Planner():
         while not q.empty():
             cf, cnode = q.get()
             if cnode == g:
-                print("Path found, time will be", costs[g] * 60 / 5000)  # 5 km/hr on flat
+                print("Path found, time will be", costs[g] * 60 / 5000)  # 5 km/hr known as the preferred walking distance.
                 return self.make_path(parents, g)
             for edge in cnode.ways:
                 newcost = costs[cnode] + edge.cost
@@ -160,9 +160,9 @@ class PlanWin(Frame):
         return self.lat_lon_to_elev(((TOPLAT - (y / TOYPIX)), ((x / TOXPIX) + LEFTLON)))
 
     def lat_lon_to_elev(self, latlon):
-        # row is 0 for 43N, 1201 (EPIX) for 42N
+        # row is 0 for 44N, 3601 (EPIX) for 42N
         row = (int)((44 - latlon[0]) * EPIX)
-        # col is 0 for 18 E, 1201 for 19 E
+        # col is 0 for 18 E, 3601 for 19 E
         col = (int)((latlon[1] + 79) * EPIX)
         return self.elevs[row][col]
 
@@ -191,11 +191,11 @@ class PlanWin(Frame):
         if self.startnode is None:
             self.startnode = self.nodes[self.lastnode]
             self.snpix = self.lat_lon_to_pix(self.startnode.pos)
-            self.canvas.coords('startdot', (self.snpix[0] - 2, self.snpix[1] - 2, self.snpix[0] + 2, self.snpix[1] + 2))
+            self.canvas.coords('startdot', (self.snpix[0] - 5, self.snpix[1] - 5, self.snpix[0] + 5, self.snpix[1] + 5))
         elif self.goalnode is None:
             self.goalnode = self.nodes[self.lastnode]
             self.snpix = self.lat_lon_to_pix(self.goalnode.pos)
-            self.canvas.coords('goaldot', (self.snpix[0] - 2, self.snpix[1] - 2, self.snpix[0] + 2, self.snpix[1] + 2))
+            self.canvas.coords('goaldot', (self.snpix[0] - 5, self.snpix[1] - 5, self.snpix[0] + 5, self.snpix[1] + 5))
 
     def clear(self):
         ''' Clear button callback. '''
@@ -208,25 +208,23 @@ class PlanWin(Frame):
 
     def plan_path(self):
         ''' Path button callback, plans and then draws path.'''
-        print
-        "Planning!"
+        print ("Planning Began!")
         if self.startnode is None or self.goalnode is None:
-            print
-            "Sorry, not enough info."
+            print("Start or goal nodes haven't been defined yet")
             return
         print("From", self.startnode.id, "to", self.goalnode.id)
         nodes, ways = self.planner.plan(self.startnode, self.goalnode)
         lastway = ""
         for wayname in ways:
             if wayname != lastway:
-                print
-                wayname
+                print (wayname)
                 lastway = wayname
         coords = []
         for node in nodes:
             npos = self.lat_lon_to_pix(node.pos)
             coords.append(npos[0])
             coords.append(npos[1])
+            print("Coords: \n", coords)
             # print node.id
         self.canvas.coords('path', *coords)
 
