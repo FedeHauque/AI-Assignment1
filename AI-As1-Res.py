@@ -106,29 +106,34 @@ class Planner():
         '''
         return node_dist(node, gnode)
 
-    def plan(self, s, g):   #WHAT IS "S"??
+    def plan(self, s, g):
         '''
         Standard A* search
         '''
-        parents = {}
-        costs = {}
-        q = PriorityQueue()
-        q.put((self.heur(s, g), s))
-        parents[s] = None
-        costs[s] = 0
-        while not q.empty():
-            cf, cnode = q.get()
-            if cnode == g:
-                print("Path found, time will be", costs[g] * 60 / 5000)  # 5 km/hr known as the preferred walking distance.
-                return self.make_path(parents, g)
-            for edge in cnode.ways:
-                newcost = costs[cnode] + edge.cost
-                if edge.dest not in parents or newcost < costs[edge.dest]:
-                    parents[edge.dest] = (cnode, edge.way)
-                    costs[edge.dest] = newcost
-                    q.put((self.heur(edge.dest, g) + newcost, edge.dest))
+        if(s!=g):
+            parents = {}
+            costs = {}
+            q = PriorityQueue()
+            q.put((self.heur(s, g), s))
+            parents[s] = None
+            costs[s] = 0
+            while not q.empty():
+                cf, cnode = q.get()
+                if cnode == g:
+                    print("Path found, time will be", costs[g] * 60 / 5000, " minutes.")  # 5 km/hr known as the preferred walking distance.
+                    return self.make_path(parents, g)
+                for edge in cnode.ways:
+                    newcost = costs[cnode] + edge.cost
+                    if edge.dest not in parents or newcost < costs[edge.dest]:
+                        parents[edge.dest] = (cnode, edge.way)
+                        costs[edge.dest] = newcost
+                        q.put((self.heur(edge.dest, g) + newcost, edge.dest))
+        else:
+            print('Start and goal nodes are the same! - Closing the window')
+            sys.exit(0)
 
-    def make_path(self, par, g):  #WHAT IS PAR??
+
+    def make_path(self, par, g):
         nodes = []
         ways = []
         curr = g  #Current is equal to g. Arranca de atras para adelante.
@@ -341,7 +346,7 @@ def build_graph(elevs):
                 ways[wayid].nodes = nlist
     return nodes, ways, coastnodes
 
-def build_elevs():
+def build_elevs():    #Code adapted from asuggested code in the internet - Reference: https://bit.ly/2E1rIYs
     height = EPIX
     width = EPIX
     fi = open(r"n43_w079_1arc_v2.bil", "rb")
@@ -359,10 +364,8 @@ def build_elevs():
 
 elevs = build_elevs()
 nodes, ways, coastnodes = build_graph(elevs)
-print(len(nodes),' nodes: ')
-print(len(ways), 'ways: ')
+print(elevs)
 
 master = Tk()
 thewin = PlanWin(master, nodes, ways, coastnodes, elevs)
 mainloop()
-
